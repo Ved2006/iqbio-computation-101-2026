@@ -16,7 +16,7 @@
     <a href="start-here.html">Start Here</a>
     <a href="index.html#workshops">Workshops</a>
     <a href="guides.html">Guides</a>
-    <a href="https://github.com/gsstephenson/iqbio-computation-101-2026" target="_blank" rel="noopener">Repo ↗</a>
+    <a href="https://github.com/gsstephenson/iqbio-computation-101-2026" target="_blank" rel="noopener noreferrer">Repo ↗</a>
   </div>
 </nav>
 
@@ -68,7 +68,7 @@
       <b>5 · Optional · CU VPN (Cisco Secure Client) — for off-campus work later</b>
       <p>On the campus network (CU Secure WiFi) you won't need it, workshop included. Off campus, the
          workshop server is unreachable without it — so install it when you want to work from home:
-         <a href="https://oit.colorado.edu/services/network-internet-services/vpn/help/cisco-vpn" target="_blank" rel="noopener">OIT's install instructions</a>,
+         <a href="https://oit.colorado.edu/services/network-internet-services/vpn/help/cisco-vpn" target="_blank" rel="noopener noreferrer">OIT's install instructions</a>,
          server <code>vpn.colorado.edu</code>. Not a prerequisite for the workshop.</p>
       <span class="proof">proof: none needed — tick it when you've done it</span>
     </li>
@@ -121,7 +121,7 @@
 <footer>
   <p>IQ Biology Bootcamp · Computation 101 · 2026 cohort</p>
   <p style="margin-top:.4rem">maintained by George Stephenson ·
-     <a href="https://github.com/gsstephenson/iqbio-computation-101-2026" target="_blank" rel="noopener">source on GitHub</a></p>
+     <a href="https://github.com/gsstephenson/iqbio-computation-101-2026" target="_blank" rel="noopener noreferrer">source on GitHub</a></p>
 </footer>
 
 <script>
@@ -174,24 +174,36 @@
   function gate(){ vSubmit.disabled = !(vName.value.trim().length >= 2); }
   vName.addEventListener('input', gate);
 
-  /* GitHub username live check (public API, no auth) */
-  var ghTimer = null, ghSeq = 0;
+  /* GitHub username live check (public API, with in-memory caching & debounce) */
+  var ghTimer = null, ghSeq = 0, ghUserCache = {};
   vGh.addEventListener('input', function(){
     var u = vGh.value.trim();
     clearTimeout(ghTimer);
     var seq = ++ghSeq;
     if (!u) { setStat(vGhStat,'idle','waiting…'); return; }
+    if (u.length < 3) { setStat(vGhStat,'idle','username too short…'); return; }
+    
+    // Check in-memory cache first to save classroom API quota
+    if (ghUserCache[u] !== undefined) {
+      var code = ghUserCache[u];
+      if (code === 200) setStat(vGhStat,'ok','✓ account found on GitHub');
+      else if (code === 404) setStat(vGhStat,'bad','✗ no such GitHub user — check spelling');
+      else setStat(vGhStat,'idle','couldn\'t check right now (rate limit?) — fine to submit anyway');
+      return;
+    }
+
     setStat(vGhStat,'idle','checking…');
     ghTimer = setTimeout(function(){
       fetch('https://api.github.com/users/' + encodeURIComponent(u))
         .then(function(r){
+          ghUserCache[u] = r.status;
           if (seq !== ghSeq || u !== vGh.value.trim()) return; /* stale response — newer keystroke owns the status */
           if (r.status === 200) setStat(vGhStat,'ok','✓ account found on GitHub');
           else if (r.status === 404) setStat(vGhStat,'bad','✗ no such GitHub user — check spelling');
           else setStat(vGhStat,'idle','couldn\'t check right now (rate limit?) — fine to submit anyway');
         })
         .catch(function(){ if (seq === ghSeq) setStat(vGhStat,'idle','network hiccup — fine to submit anyway'); });
-    }, 500);
+    }, 800);
   });
 
   vSsh.addEventListener('input', function(){

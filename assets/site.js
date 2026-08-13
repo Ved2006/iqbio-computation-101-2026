@@ -17,7 +17,7 @@
   /* Helper to clean command strings by removing leading shell prompts */
   function cleanPrompt(text) {
     if (!text) return '';
-    return text.replace(/^\s*(?:\[[^\]]+\]\$|\$|>|%)\s*/, '')
+    return text.replace(/^\s*(?:\[[^\]@]+@[^\]]+\][:\s]*[\$#>%\w~./-]*|\$|>|%)\s*/, '')
                .replace(/\s+$/, '');
   }
 
